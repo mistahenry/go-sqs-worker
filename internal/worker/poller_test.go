@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -9,8 +10,9 @@ import (
 )
 
 type fakeSQS struct {
-	messages []types.Message
-	err      error
+	messages       []types.Message
+	deletedHandles map[string]bool
+	err            error
 }
 
 func (f *fakeSQS) ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessageInput, optFns ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error) {
@@ -21,6 +23,12 @@ func (f *fakeSQS) ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessage
 }
 
 func (f *fakeSQS) DeleteMessage(ctx context.Context, params *sqs.DeleteMessageInput, optFns ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error) {
+	if f.deletedHandles == nil {
+		f.deletedHandles = make(map[string]bool)
+	}
+	if params.ReceiptHandle != nil {
+		f.deletedHandles[*params.ReceiptHandle] = true
+	}
 	return &sqs.DeleteMessageOutput{}, nil
 }
 
@@ -66,5 +74,77 @@ func TestPoller_ReceiveOne_NoMessages(t *testing.T) {
 	}
 	if msg != nil {
 		t.Errorf("expected nil, got %+v", msg)
+	}
+}
+
+func TestPoller_ProcessOne_DeletesOnSuccess(t *testing.T) {
+	t.Parallel()
+
+	msgID := "test-123"
+	msgBody := "hello"
+	receiptHandle := "receipt-abc"
+
+	client := &fakeSQS{
+		messages: []types.Message{
+			{
+				MessageId:     &msgID,
+				Body:          &msgBody,
+				ReceiptHandle: &receiptHandle,
+			},
+		},
+	}
+
+	var processedMsg *Message
+	handler := func(ctx context.Context, msg *Message) error {
+		processedMsg = msg
+		return nil // success
+	}
+
+	p := NewPoller(client, "http://example.com/queue")
+	err := p.ProcessOne(context.Background(), handler)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if processedMsg == nil {
+		t.Fatal("handler was not called")
+	}
+	if processedMsg.ID != msgID {
+		t.Errorf("expected handler to receive ID %q, got %q", msgID, processedMsg.ID)
+	}
+	if !client.deletedHandles[receiptHandle] {
+		t.Errorf("expected receipt %q to be deleted", receiptHandle)
+	}
+}
+
+func TestPoller_ProcessOne_NoDeleteOnHandlerError(t *testing.T) {
+	t.Parallel()
+
+	msgID := "test-123"
+	msgBody := "hello"
+	receiptHandle := "receipt-abc"
+
+	client := &fakeSQS{
+		messages: []types.Message{
+			{
+				MessageId:     &msgID,
+				Body:          &msgBody,
+				ReceiptHandle: &receiptHandle,
+			},
+		},
+	}
+
+	handler := func(ctx context.Context, msg *Message) error {
+		return fmt.Errorf("processing failed")
+	}
+
+	p := NewPoller(client, "http://example.com/queue")
+	err := p.ProcessOne(context.Background(), handler)
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if client.deletedHandles[receiptHandle] {
+		t.Error("message should not be deleted on handler error")
 	}
 }

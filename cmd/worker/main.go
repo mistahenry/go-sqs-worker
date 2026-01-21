@@ -29,18 +29,17 @@ func main() {
 	client := newSQSClient(ctx, cfg)
 	poller := worker.NewPoller(client, cfg.QueueURL)
 
-	msg, err := poller.ReceiveOne(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "receive error: %v\n", err)
+	handler := func(ctx context.Context, msg *worker.Message) error {
+		fmt.Printf("processing: id=%s body=%s\n", msg.ID, msg.Body)
+		return nil
+	}
+
+	if err := poller.ProcessOne(ctx, handler); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	if msg == nil {
-		fmt.Println("no messages")
-		return
-	}
-
-	fmt.Printf("received: id=%s body=%s\n", msg.ID, msg.Body)
+	fmt.Println("done")
 }
 
 func newSQSClient(ctx context.Context, cfg config.Config) worker.SQSClient {
