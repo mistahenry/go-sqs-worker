@@ -55,7 +55,13 @@ sqs-smoke: check-env sqs-create-queue
 	  --query 'Messages[0].Body' \
 	  --output text
 
-sqs-purge: check-env
+sqs-bulk-seed: check-env sqs-create-queue
+	@echo "Seeding 50 messages..."
+	@seq 1 50 | xargs -P 10 -I {} aws --endpoint-url $(SQS_ENDPOINT) \
+		sqs send-message --queue-url $(SQS_QUEUE_URL) \
+		--message-body '{"id":"{}"}' --no-cli-pager >/dev/null 2>&1
+	@echo "Seeded 50 messages"
+sqs-purge: check-env sqs-create-queue
 	@AWS_PAGER="" aws --endpoint-url $(SQS_ENDPOINT) sqs purge-queue \
 	  --queue-url $(SQS_QUEUE_URL)
 	@echo "Queue purged"
