@@ -25,6 +25,7 @@ type Config struct {
 	AWSAccessKey string
 	AWSSecretKey string
 	Concurrency  int
+	MaxInFlight  int
 }
 
 func Load(env EnvReader) (Config, error) {
@@ -41,6 +42,14 @@ func Load(env EnvReader) (Config, error) {
 		return Config{}, errors.New("WORKER_CONCURRENCY must be > 0")
 	}
 
+	maxInFlight, err := getenvInt(env, "MAX_IN_FLIGHT", 5)
+	if err != nil {
+		return Config{}, err
+	}
+	if maxInFlight <= 0 {
+		return Config{}, errors.New("MAX_IN_FLIGHT must be > 0")
+	}
+
 	region := getenv(env, "AWS_REGION", "us-east-1")
 	endpoint := env.Getenv("SQS_ENDPOINT")
 	accessKey := getenv(env, "AWS_ACCESS_KEY_ID", "dummy")
@@ -53,6 +62,7 @@ func Load(env EnvReader) (Config, error) {
 		Concurrency:  concurrency,
 		AWSAccessKey: accessKey,
 		AWSSecretKey: secretKey,
+		MaxInFlight:  maxInFlight,
 	}, nil
 }
 

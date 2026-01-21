@@ -91,3 +91,25 @@ func TestLoad_NonIntegerConcurrencyFails(t *testing.T) {
 		t.Fatal("expected error for non-integer WORKER_CONCURRENCY, got nil")
 	}
 }
+
+func TestLoad_InvalidMaxInFlightFails(t *testing.T) {
+	env := fakeEnv{
+		"SQS_QUEUE_URL": "http://example.com/queue",
+		"MAX_IN_FLIGHT": "0",
+	}
+	_, err := Load(env)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestLoad_NonIntegerMaxInFlightFails(t *testing.T) {
+	env := fakeEnv{
+		"SQS_QUEUE_URL": "http://example.com/queue",
+		"MAX_IN_FLIGHT": "abc",
+	}
+	_, err := Load(env)
+	if err == nil {
+		t.Fatal("expected error for non-integer WORKER_CONCURRENCY, got nil")
+	}
+}

@@ -34,12 +34,34 @@ func main() {
 		return nil
 	}
 
-	if err := poller.ProcessOne(ctx, handler); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
+	sem := make(chan struct{}, cfg.MaxInFlight)
 
-	fmt.Println("done")
+	for {
+		sem <- struct{}{}
+
+		msg, err := poller.ReceiveOne(ctx)
+		if err != nil {
+			<-sem
+			fmt.Fprintf(os.Stderr, "receive error: %v\n", err)
+			continue
+		}
+		if msg == nil {
+			<-sem
+			continue
+		}
+
+		go func(m *worker.Message) {
+			defer func() { <-sem }()
+	
+			if err := handler(ctx, m); err != nil {
+				fmt.Fprintf(os.Stderr, "handler error: %v\n", err)
+				return
+			}
+			if err := poller.Delete(ctx, m); err != nil {
+				fmt.Fprintf(os.Stderr, "delete error: %v\n", err)
+			}
+		}(msg)
+	}
 }
 
 func newSQSClient(ctx context.Context, cfg config.Config) worker.SQSClient {
