@@ -8,7 +8,7 @@ endif
 
 SHELL := /bin/bash
 
-.PHONY: help init-env check-env dev-up dev-down dev-logs sqs-create-queue sqs-smoke
+.PHONY: help init-env check-env dev-up dev-down dev-logs sqs-create-queue sqs-smoke sqs-purge
 
 help:
 	@echo "Targets:"
@@ -54,3 +54,8 @@ sqs-smoke: check-env sqs-create-queue
 	  --max-number-of-messages 1 \
 	  --query 'Messages[0].Body' \
 	  --output text
+
+sqs-purge: check-env
+	@AWS_PAGER="" aws --endpoint-url $(SQS_ENDPOINT) sqs purge-queue \
+	  --queue-url $(SQS_QUEUE_URL)
+	@echo "Queue purged"
