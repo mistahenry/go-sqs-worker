@@ -19,11 +19,12 @@ func (OSEnv) Getenv(key string) string {
 }
 
 type Config struct {
-	AWSRegion   string
-	SQSEndpoint string
-	QueueURL    string
-
-	Concurrency int
+	AWSRegion    string
+	SQSEndpoint  string
+	QueueURL     string
+	AWSAccessKey string
+	AWSSecretKey string
+	Concurrency  int
 }
 
 func Load(env EnvReader) (Config, error) {
@@ -42,12 +43,16 @@ func Load(env EnvReader) (Config, error) {
 
 	region := getenv(env, "AWS_REGION", "us-east-1")
 	endpoint := env.Getenv("SQS_ENDPOINT")
+	accessKey := getenv(env, "AWS_ACCESS_KEY_ID", "dummy")
+	secretKey := getenv(env, "AWS_SECRET_ACCESS_KEY", "dummy")
 
 	return Config{
-		AWSRegion:   region,
-		SQSEndpoint: endpoint,
-		QueueURL:    queueURL,
-		Concurrency: concurrency,
+		AWSRegion:    region,
+		SQSEndpoint:  endpoint,
+		QueueURL:     queueURL,
+		Concurrency:  concurrency,
+		AWSAccessKey: accessKey,
+		AWSSecretKey: secretKey,
 	}, nil
 }
 

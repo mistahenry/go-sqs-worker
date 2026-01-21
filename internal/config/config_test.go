@@ -32,14 +32,22 @@ func TestLoad_DefaultsApply(t *testing.T) {
 	if cfg.Concurrency != 4 {
 		t.Fatalf("expected default Concurrency 4, got %d", cfg.Concurrency)
 	}
+	if cfg.AWSSecretKey != "dummy" {
+		t.Fatalf("expected AWSSecretKey dummy, got %q", cfg.AWSSecretKey)
+	}
+	if cfg.AWSAccessKey != "dummy" {
+		t.Fatalf("expected AWSAccessKey dummy, got %q", cfg.AWSAccessKey)
+	}
 }
 
 func TestLoad_ExplicitValuesOverrideDefaults(t *testing.T) {
 	env := fakeEnv{
-		"SQS_QUEUE_URL":      "http://example.com/queue",
-		"AWS_REGION":         "eu-west-1",
-		"WORKER_CONCURRENCY": "8",
-		"SQS_ENDPOINT":       "http://localhost:9324",
+		"SQS_QUEUE_URL":         "http://example.com/queue",
+		"AWS_REGION":            "eu-west-1",
+		"WORKER_CONCURRENCY":    "8",
+		"SQS_ENDPOINT":          "http://localhost:9324",
+		"AWS_ACCESS_KEY_ID":     "someAccessKey",
+		"AWS_SECRET_ACCESS_KEY": "someSecretAccessKey",
 	}
 	cfg, err := Load(env)
 	if err != nil {
@@ -53,6 +61,12 @@ func TestLoad_ExplicitValuesOverrideDefaults(t *testing.T) {
 	}
 	if cfg.SQSEndpoint != "http://localhost:9324" {
 		t.Fatalf("expected SQSEndpoint http://localhost:9324, got %q", cfg.SQSEndpoint)
+	}
+	if cfg.AWSSecretKey != "someSecretAccessKey" {
+		t.Fatalf("expected AWSSecretKey someSecretAccessKey, got %q", cfg.AWSSecretKey)
+	}
+	if cfg.AWSAccessKey != "someAccessKey" {
+		t.Fatalf("expected AWSAccessKey someAccessKey, got %q", cfg.AWSAccessKey)
 	}
 }
 
