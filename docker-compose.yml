@@ -1,0 +1,15 @@
+services:
+  elasticmq:
+    image: softwaremill/elasticmq-native:1.6.11
+    container_name: elasticmq
+    ports:
+      - "9324:9324" # SQS endpoint
+      - "9325:9325" # UI (optional)
+    volumes:
+      - ./dev/elasticmq.conf:/opt/elasticmq.conf:ro
+    command: ["-Dconfig.file=/opt/elasticmq.conf"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9324"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
