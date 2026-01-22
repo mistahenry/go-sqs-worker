@@ -34,7 +34,7 @@ func main() {
 		return nil
 	}
 
-	runner := worker.NewRunner(poller, handler, cfg.MaxInFlight)
+	runner := worker.NewRunner(poller, handler, cfg.MaxInFlight, cfg.Concurrency)
 	if err := runner.Run(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

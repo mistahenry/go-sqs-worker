@@ -94,7 +94,7 @@ func TestRunner_Integration_ProcessesAll(t *testing.T) {
 		return nil
 	}
 
-	runner := worker.NewRunner(poller, handler, 3)
+	runner := worker.NewRunner(poller, handler, 3, 2)
 
 	runCtx, stop := context.WithCancel(ctx)
 	defer stop()

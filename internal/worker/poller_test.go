@@ -3,38 +3,10 @@ package worker
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
-
-type fakeSQS struct {
-	messages       []types.Message
-	deletedHandles map[string]bool
-	err            error
-	mu             sync.Mutex
-}
-
-func (f *fakeSQS) ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessageInput, optFns ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return &sqs.ReceiveMessageOutput{Messages: f.messages}, nil
-}
-
-func (f *fakeSQS) DeleteMessage(ctx context.Context, params *sqs.DeleteMessageInput, optFns ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.deletedHandles == nil {
-		f.deletedHandles = make(map[string]bool)
-	}
-	if params.ReceiptHandle != nil {
-		f.deletedHandles[*params.ReceiptHandle] = true
-	}
-	return &sqs.DeleteMessageOutput{}, nil
-}
 
 func TestPoller_ReceiveOne_ReturnsMessage(t *testing.T) {
 	t.Parallel()
