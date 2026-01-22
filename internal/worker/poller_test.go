@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -13,6 +14,7 @@ type fakeSQS struct {
 	messages       []types.Message
 	deletedHandles map[string]bool
 	err            error
+	mu             sync.Mutex
 }
 
 func (f *fakeSQS) ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessageInput, optFns ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error) {
@@ -23,6 +25,8 @@ func (f *fakeSQS) ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessage
 }
 
 func (f *fakeSQS) DeleteMessage(ctx context.Context, params *sqs.DeleteMessageInput, optFns ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.deletedHandles == nil {
 		f.deletedHandles = make(map[string]bool)
 	}

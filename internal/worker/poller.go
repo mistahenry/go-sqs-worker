@@ -8,8 +8,9 @@ import (
 )
 
 type Poller struct {
-	client   SQSClient
-	queueURL string
+	client          SQSClient
+	queueURL        string
+	waitTimeSeconds int32
 }
 
 type Message struct {
@@ -22,8 +23,9 @@ type Handler func(ctx context.Context, msg *Message) error
 
 func NewPoller(client SQSClient, queueURL string) *Poller {
 	return &Poller{
-		client:   client,
-		queueURL: queueURL,
+		client:          client,
+		queueURL:        queueURL,
+		waitTimeSeconds: 5,
 	}
 }
 
@@ -65,7 +67,7 @@ func (p *Poller) ReceiveOne(ctx context.Context) (*Message, error) {
 	out, err := p.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl:            &p.queueURL,
 		MaxNumberOfMessages: 1,
-		WaitTimeSeconds:     15,
+		WaitTimeSeconds:     5,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("receive: %w", err)
@@ -81,4 +83,9 @@ func (p *Poller) ReceiveOne(ctx context.Context) (*Message, error) {
 		Body:          *msg.Body,
 		ReceiptHandle: msg.ReceiptHandle,
 	}, nil
+}
+
+func (p *Poller) WithWaitTimeSeconds(seconds int32) *Poller {
+	p.waitTimeSeconds = seconds
+	return p
 }
