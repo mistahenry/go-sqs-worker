@@ -118,6 +118,7 @@ Planned implementation steps, in order:
 - [ ] Visibility timeout extension for long-running jobs
 - [X] Unit tests with fake SQS client
 - [X] Integration tests against ElasticMQ
+- [ ] Implement Configurable logger pattern
 - [ ] Optional: batch delete and metrics hooks
 
 Each step is intended to be implemented and validated independently.
