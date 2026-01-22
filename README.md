@@ -119,6 +119,7 @@ Planned implementation steps, in order:
 - [X] Unit tests with fake SQS client
 - [X] Integration tests against ElasticMQ
 - [ ] Implement Configurable logger pattern
+- [ ] Implement Batching (receive, delete, data source updates)
 - [ ] Assess + Stress test all timeouts
 - [ ] Optional: batch delete and metrics hooks
 
