@@ -108,15 +108,16 @@ files itself.
 
 Planned implementation steps, in order:
 
-- [ ] Scaffold Go worker entrypoint (`cmd/worker`)
-- [ ] Implement long-polling receive loop
-- [ ] Add bounded concurrency and backpressure
-- [ ] Delete messages only after successful processing
-- [ ] Graceful shutdown with in-flight drain
+- [X] Scaffold Go worker entrypoint (`cmd/worker`)
+- [X] Implement long-polling receive loop
+- [X] Add bounded concurrency and backpressure
+- [X] Delete messages only after successful processing
+- [X] Graceful shutdown with in-flight drain
+  - [ ] Test drain behavior with Unit Test 
 - [ ] Idempotent handler interface (external coordination)
 - [ ] Visibility timeout extension for long-running jobs
-- [ ] Unit tests with fake SQS client
-- [ ] Integration tests against ElasticMQ
+- [X] Unit tests with fake SQS client
+- [X] Integration tests against ElasticMQ
 - [ ] Optional: batch delete and metrics hooks
 
 Each step is intended to be implemented and validated independently.
