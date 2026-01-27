@@ -62,7 +62,7 @@ func TestRunner_Integration_ProcessesAll(t *testing.T) {
 		})
 	}()
 
-	// Seed messages with a unique run ID so we don’t need purge.
+	// Seed messages with a unique run MessageID so we don’t need purge.
 	runID := fmt.Sprintf("run-%d", time.Now().UnixNano())
 	const n = 5
 

@@ -12,6 +12,8 @@ type Runner struct {
 	handler     Handler
 	maxInFlight int
 	concurrency int
+	leaseStore  LeaseStore
+	leaseTTL    time.Duration
 }
 
 func NewRunner(poller *Poller, handler Handler, maxInFlight int, concurrency int) *Runner {
@@ -21,6 +23,12 @@ func NewRunner(poller *Poller, handler Handler, maxInFlight int, concurrency int
 		maxInFlight: maxInFlight,
 		concurrency: concurrency,
 	}
+}
+
+func (r *Runner) WithLeaseStore(store LeaseStore, ttl time.Duration) *Runner {
+	r.leaseStore = store
+	r.leaseTTL = ttl
+	return r
 }
 
 func (r *Runner) Run(ctx context.Context) error {
@@ -80,10 +88,32 @@ func (r *Runner) Run(ctx context.Context) error {
 
 func (r *Runner) worker(ctx context.Context, msgCh <-chan *Message, sem <-chan struct{}, workerID int) {
 	for msg := range msgCh {
+		var token string
+
+		// Acquire lease if store configured
+		if r.leaseStore != nil {
+			var ok bool
+			var err error
+			token, ok, err = r.leaseStore.Acquire(ctx, msg.MessageID, r.leaseTTL)
+			if err != nil {
+				fmt.Printf("worker %d lease error: %v\n", workerID, err)
+				<-sem
+				continue
+			}
+			if !ok {
+				// Another worker has it, skip
+				<-sem
+				continue
+			}
+		}
+
 		handlerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 
 		if err := r.handler(handlerCtx, msg); err != nil {
 			cancel()
+			if r.leaseStore != nil {
+				_ = r.leaseStore.Release(ctx, msg.MessageID, token)
+			}
 			<-sem
 			fmt.Printf("worker %d handler error: %v\n", workerID, err)
 			continue
@@ -95,6 +125,10 @@ func (r *Runner) worker(ctx context.Context, msgCh <-chan *Message, sem <-chan s
 			fmt.Printf("worker %d delete error: %v\n", workerID, err)
 		}
 		delCancel()
+
+		if r.leaseStore != nil {
+			_ = r.leaseStore.Release(ctx, msg.MessageID, token)
+		}
 
 		<-sem
 	}

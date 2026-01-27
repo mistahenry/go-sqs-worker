@@ -11,7 +11,9 @@ func (e fakeEnv) Getenv(key string) string {
 }
 
 func TestLoad_MissingQueueURLFails(t *testing.T) {
-	env := fakeEnv{}
+	env := fakeEnv{
+		"REDIS_ADDR": "http://example.com/queue",
+	}
 	_, err := Load(env)
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -21,6 +23,7 @@ func TestLoad_MissingQueueURLFails(t *testing.T) {
 func TestLoad_DefaultsApply(t *testing.T) {
 	env := fakeEnv{
 		"SQS_QUEUE_URL": "http://localhost:9324/000000000000/local-sqs-worker",
+		"REDIS_ADDR":    "localhost:6379",
 	}
 	cfg, err := Load(env)
 	if err != nil {
@@ -38,6 +41,9 @@ func TestLoad_DefaultsApply(t *testing.T) {
 	if cfg.AWSAccessKey != "dummy" {
 		t.Fatalf("expected AWSAccessKey dummy, got %q", cfg.AWSAccessKey)
 	}
+	if cfg.LeaseTTL != 30 {
+		t.Fatalf("expected default LeaseTTL 30, got %d", cfg.LeaseTTL)
+	}
 }
 
 func TestLoad_ExplicitValuesOverrideDefaults(t *testing.T) {
@@ -48,6 +54,8 @@ func TestLoad_ExplicitValuesOverrideDefaults(t *testing.T) {
 		"SQS_ENDPOINT":          "http://localhost:9324",
 		"AWS_ACCESS_KEY_ID":     "someAccessKey",
 		"AWS_SECRET_ACCESS_KEY": "someSecretAccessKey",
+		"LEASE_TTL":             "15",
+		"REDIS_ADDR":            "localhost:6379",
 	}
 	cfg, err := Load(env)
 	if err != nil {
@@ -67,6 +75,12 @@ func TestLoad_ExplicitValuesOverrideDefaults(t *testing.T) {
 	}
 	if cfg.AWSAccessKey != "someAccessKey" {
 		t.Fatalf("expected AWSAccessKey someAccessKey, got %q", cfg.AWSAccessKey)
+	}
+	if cfg.LeaseTTL != 15 {
+		t.Fatalf("expected LeaseTTL 15, got %d", cfg.LeaseTTL)
+	}
+	if cfg.RedisAddr != "localhost:6379" {
+		t.Fatalf("expected RedisAddr localhost:6379, got %q", cfg.RedisAddr)
 	}
 }
 
@@ -111,5 +125,38 @@ func TestLoad_NonIntegerMaxInFlightFails(t *testing.T) {
 	_, err := Load(env)
 	if err == nil {
 		t.Fatal("expected error for non-integer WORKER_CONCURRENCY, got nil")
+	}
+}
+
+func TestLoad_InvalidLeaseTTLFails(t *testing.T) {
+	env := fakeEnv{
+		"SQS_QUEUE_URL": "http://example.com/queue",
+		"LEASE_TTL":     "-1",
+		"REDIS_ADDR":    "localhost:6379",
+	}
+	_, err := Load(env)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestLoad_NonIntegerLeaseTTLFails(t *testing.T) {
+	env := fakeEnv{
+		"SQS_QUEUE_URL": "http://example.com/queue",
+		"LEASE_TTL":     "abc",
+	}
+	_, err := Load(env)
+	if err == nil {
+		t.Fatal("expected error for non-integer LEASE_TTL, got nil")
+	}
+}
+
+func TestLoad_MissingRedisAddressFails(t *testing.T) {
+	env := fakeEnv{
+		"SQS_QUEUE_URL": "http://example.com/queue",
+	}
+	_, err := Load(env)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }

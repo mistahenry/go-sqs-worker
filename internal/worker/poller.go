@@ -14,7 +14,7 @@ type Poller struct {
 }
 
 type Message struct {
-	ID            string
+	MessageID     string
 	Body          string
 	ReceiptHandle *string
 }
@@ -79,7 +79,7 @@ func (p *Poller) ReceiveOne(ctx context.Context) (*Message, error) {
 
 	msg := out.Messages[0]
 	return &Message{
-		ID:            *msg.MessageId,
+		MessageID:     *msg.MessageId,
 		Body:          *msg.Body,
 		ReceiptHandle: msg.ReceiptHandle,
 	}, nil

@@ -26,6 +26,8 @@ type Config struct {
 	AWSSecretKey string
 	Concurrency  int
 	MaxInFlight  int
+	RedisAddr    string
+	LeaseTTL     int
 }
 
 func Load(env EnvReader) (Config, error) {
@@ -50,6 +52,19 @@ func Load(env EnvReader) (Config, error) {
 		return Config{}, errors.New("MAX_IN_FLIGHT must be > 0")
 	}
 
+	redisAddr := env.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		return Config{}, errors.New("REDIS_ADDR is required")
+	}
+
+	leaseTTL, err := getenvInt(env, "LEASE_TTL", 45)
+	if err != nil {
+		return Config{}, err
+	}
+	if leaseTTL <= 0 {
+		return Config{}, errors.New("LEASE_TTL must be > 0")
+	}
+
 	region := getenv(env, "AWS_REGION", "us-east-1")
 	endpoint := env.Getenv("SQS_ENDPOINT")
 	accessKey := getenv(env, "AWS_ACCESS_KEY_ID", "dummy")
@@ -63,6 +78,8 @@ func Load(env EnvReader) (Config, error) {
 		AWSAccessKey: accessKey,
 		AWSSecretKey: secretKey,
 		MaxInFlight:  maxInFlight,
+		RedisAddr:    redisAddr,
+		LeaseTTL:     leaseTTL,
 	}, nil
 }
 

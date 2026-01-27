@@ -5,11 +5,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/redis/go-redis/v9"
 
 	"go-sqs-worker/internal/config"
 	"go-sqs-worker/internal/worker"
@@ -30,11 +32,19 @@ func main() {
 	poller := worker.NewPoller(client, cfg.QueueURL)
 
 	handler := func(ctx context.Context, msg *worker.Message) error {
-		fmt.Printf("processing: id=%s body=%s\n", msg.ID, msg.Body)
+		fmt.Printf("processing: id=%s body=%s\n", msg.MessageID, msg.Body)
 		return nil
 	}
 
-	runner := worker.NewRunner(poller, handler, cfg.MaxInFlight, cfg.Concurrency)
+	// Redis setup
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAddr,
+	})
+	defer redisClient.Close()
+
+	runner := worker.NewRunner(poller, handler, cfg.MaxInFlight, cfg.Concurrency).
+		WithLeaseStore(worker.NewRedisLeaseStore(redisClient), time.Duration(cfg.LeaseTTL)*time.Second)
+
 	if err := runner.Run(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

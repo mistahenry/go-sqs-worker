@@ -29,8 +29,8 @@ func TestPoller_ReceiveOne_ReturnsMessage(t *testing.T) {
 	if msg == nil {
 		t.Fatal("expected message, got nil")
 	}
-	if msg.ID != msgID {
-		t.Errorf("expected ID %q, got %q", msgID, msg.ID)
+	if msg.MessageID != msgID {
+		t.Errorf("expected MessageID %q, got %q", msgID, msg.MessageID)
 	}
 	if msg.Body != msgBody {
 		t.Errorf("expected Body %q, got %q", msgBody, msg.Body)
@@ -85,8 +85,8 @@ func TestPoller_ProcessOne_DeletesOnSuccess(t *testing.T) {
 	if processedMsg == nil {
 		t.Fatal("handler was not called")
 	}
-	if processedMsg.ID != msgID {
-		t.Errorf("expected handler to receive ID %q, got %q", msgID, processedMsg.ID)
+	if processedMsg.MessageID != msgID {
+		t.Errorf("expected handler to receive MessageID %q, got %q", msgID, processedMsg.MessageID)
 	}
 	if !client.deletedHandles[receiptHandle] {
 		t.Errorf("expected receipt %q to be deleted", receiptHandle)
